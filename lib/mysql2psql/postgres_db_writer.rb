@@ -6,7 +6,7 @@ class Mysql2psql
 
 class PostgresDbWriter < PostgresWriter
   attr_reader :conn, :hostname, :login, :password, :database, :schema, :port
-  
+
   def initialize(options)
     @hostname, @login, @password, @database, @port =
       options.pghostname('localhost'), options.pgusername,
@@ -22,27 +22,28 @@ class PostgresDbWriter < PostgresWriter
     @conn.exec("SET standard_conforming_strings = off") if @conn.server_version >= 80200
     @conn.exec("SET check_function_bodies = false")
     @conn.exec("SET client_min_messages = warning")
+    @conn.exec("SET session_replication_role TO replica")
   end
-  
+
   def close
     @conn.close
   end
-  
+
   def exists?(relname)
     rc = @conn.exec("SELECT COUNT(*) FROM pg_class WHERE relname = '#{relname}'")
     (!rc.nil?) && (rc.to_a.length==1) && (rc.first.count.to_i==1)
   end
-  
+
   def write_sequence_update(table, options)
     serial_key_column = table.columns.detect do |column|
       column[:auto_increment]
     end
-    
+
     if serial_key_column
       serial_key = serial_key_column[:name]
       max_value = serial_key_column[:maxval].to_i < 1 ? 1 : serial_key_column[:maxval] + 1
       serial_key_seq = "#{table.name}_#{serial_key}_seq"
-      
+
       if !options.supress_ddl
         if @conn.server_version < 80200
           @conn.exec("DROP SEQUENCE #{serial_key_seq} CASCADE") if exists?(serial_key_seq)
@@ -57,25 +58,25 @@ class PostgresDbWriter < PostgresWriter
           CACHE 1
         EOF
       end
-      
+
       if !options.supress_sequence_update
         puts "Updated sequence #{serial_key_seq} to current value of #{max_value}"
         @conn.exec sqlfor_set_serial_sequence(table, serial_key_seq, max_value)
       end
     end
   end
-  
+
   def write_table(table, options)
     puts "Creating table #{table.name}..."
     primary_keys = []
-    
+
     columns = table.columns.map do |column|
       if column[:primary_key]
         primary_keys << column[:name]
       end
       "  " + column_description(column, options)
     end.join(",\n")
-    
+
     if @conn.server_version < 80200
       @conn.exec "DROP TABLE #{PGconn.quote_ident(table.name)} CASCADE;" if exists?(table.name)
     else
@@ -89,7 +90,7 @@ class PostgresDbWriter < PostgresWriter
       raise
     end
     puts "Created table #{table.name}"
- 
+
   end
 
   def write_indexes(table)
@@ -102,7 +103,7 @@ class PostgresDbWriter < PostgresWriter
     table.indexes.each do |index|
       next if index[:primary]
       unique = index[:unique] ? "UNIQUE " : nil
-      
+
       # MySQL allows an index name which could be equal to a table name, Postgres doesn't
       indexname = index[:name]
       indexname_quoted = ''
@@ -120,7 +121,7 @@ class PostgresDbWriter < PostgresWriter
           @conn.exec("DROP INDEX IF EXISTS #{PGconn.quote_ident(indexname)} CASCADE;")
         end
       end
-      
+
       index_sql = "CREATE #{unique}INDEX #{indexname_quoted} ON #{PGconn.quote_ident(table.name)} (#{index[:columns].map {|col| PGconn.quote_ident(col)}.join(", ")});"
       @conn.exec(index_sql)
     end
@@ -143,7 +144,7 @@ class PostgresDbWriter < PostgresWriter
       end
     end
   end
-  
+
   def format_eta (t)
     t = t.to_i
     sec = t % 60
@@ -151,7 +152,7 @@ class PostgresDbWriter < PostgresWriter
     hour = t / 3600
     sprintf("%02dh:%02dm:%02ds", hour, min, sec)
   end
-  
+
   def write_contents(table, reader)
     _time1 = Time.now
     copy_line = "COPY #{PGconn.quote_ident(table.name)} (#{table.columns.map {|column| PGconn.quote_ident(column[:name])}.join(", ")}) FROM stdin;"
@@ -165,7 +166,7 @@ class PostgresDbWriter < PostgresWriter
     _counter = reader.paginated_read(table, 1000) do |row, counter|
       process_row(table, row)
       @conn.put_copy_data(row.join("\t") + "\n")
-       
+
       if counter != 0 && counter % 20000 == 0
         elapsedTime = Time.now - _time1
         eta = elapsedTime * rowcount / counter - elapsedTime
@@ -174,7 +175,7 @@ class PostgresDbWriter < PostgresWriter
         printf "\r#{counter} of #{rowcount} rows loaded. [ETA: #{etatimef} (#{etaf})]"
         STDOUT.flush
       end
-      
+
       if counter % 5000 == 0
         @conn.put_copy_end
         res = @conn.get_result
@@ -183,7 +184,7 @@ class PostgresDbWriter < PostgresWriter
         end
         @conn.exec(copy_line)
       end
-       
+
     end
     @conn.put_copy_end
     if _counter && (_counter % 5000) > 0
