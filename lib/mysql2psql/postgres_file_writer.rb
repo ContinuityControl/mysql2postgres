@@ -55,7 +55,7 @@ EOF
 --
 EOF
 
-      if !options.supress_ddl
+      if !options.suppress_ddl
         @f << <<-EOF
 DROP SEQUENCE IF EXISTS #{serial_key_seq} CASCADE;
 
@@ -67,7 +67,7 @@ CREATE SEQUENCE #{serial_key_seq}
 EOF
       end
 
-      if !options.supress_sequence_update
+      if !options.suppress_sequence_update
         @f << <<-EOF
 #{sqlfor_set_serial_sequence(table, serial_key_seq, max_value)}
 EOF

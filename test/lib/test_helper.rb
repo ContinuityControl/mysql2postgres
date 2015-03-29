@@ -77,7 +77,7 @@ def get_test_config_by_label(name)
       :exclude_tables => ['kryptonite'],
       :suppress_data => true,
       :suppress_ddl => true,
-      :supress_sequence_update => false,
+      :suppress_sequence_update => false,
       :suppress_indexes => false,
       :force_truncate => false,
       :use_timezones => false
@@ -89,7 +89,7 @@ def get_test_config_by_label(name)
       :exclude_tables => [],
       :suppress_data => false,
       :suppress_ddl => false,
-      :supress_sequence_update => false,
+      :suppress_sequence_update => false,
       :suppress_indexes => false,
       :force_truncate => true,
       :use_timezones => false
@@ -101,7 +101,7 @@ def get_test_config_by_label(name)
       :exclude_tables => [],
       :suppress_data => false,
       :suppress_ddl => false,
-      :supress_sequence_update => false,
+      :suppress_sequence_update => false,
       :suppress_indexes => false,
       :force_truncate => false,
       :use_timezones => false
@@ -113,7 +113,7 @@ def get_test_config_by_label(name)
       :exclude_tables => ['kryptonite'],
       :suppress_data => true,
       :suppress_ddl => true,
-      :supress_sequence_update => false,
+      :suppress_sequence_update => false,
       :suppress_indexes => false,
       :force_truncate => false,
       :use_timezones => false

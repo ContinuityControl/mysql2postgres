@@ -44,7 +44,7 @@ class PostgresDbWriter < PostgresWriter
       max_value = serial_key_column[:maxval].to_i < 1 ? 1 : serial_key_column[:maxval] + 1
       serial_key_seq = "#{table.name}_#{serial_key}_seq"
 
-      if !options.supress_ddl
+      if !options.suppress_ddl
         if @conn.server_version < 80200
           @conn.exec("DROP SEQUENCE #{serial_key_seq} CASCADE") if exists?(serial_key_seq)
         else
@@ -59,7 +59,7 @@ class PostgresDbWriter < PostgresWriter
         EOF
       end
 
-      if !options.supress_sequence_update
+      if !options.suppress_sequence_update
         puts "Updated sequence #{serial_key_seq} to current value of #{max_value}"
         @conn.exec sqlfor_set_serial_sequence(table, serial_key_seq, max_value)
       end
